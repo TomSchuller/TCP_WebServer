@@ -13,7 +13,7 @@ private:
     string contentType;
 
 public:
-    HttpResponse(WebSocket socket);
+    HttpResponse(WebSocket& socket);
     ~HttpResponse() = default;
 
     string createResponse(string URI);

@@ -37,7 +37,7 @@ public:
     */
 
     //Methods
-    WebSocket getSocket(int index) const { return sockets[index]; }
+    WebSocket& getSocket(int index) { return sockets[index]; }
     bool addSocket(SOCKET id, WebSocket::State state);
     void removeSocket(int index);
     void acceptConnection(int index);

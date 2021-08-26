@@ -3,10 +3,10 @@
 
 int main()
 {
+    WebServer& server = WebServer::getInstance();
     // Accept connections and handles them one by one.
     while (true)
     {
-        WebServer& server = WebServer::getInstance();
         fd_set waitRecv;
         FD_ZERO(&waitRecv);
         for (int i = 0; i < WebServer::MAX_SOCKETS; i++)

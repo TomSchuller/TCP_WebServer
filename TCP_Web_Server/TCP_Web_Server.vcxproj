@@ -150,6 +150,9 @@
     <ClInclude Include="WebServer.h" />
     <ClInclude Include="WebSocket.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="www\index.html" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

@@ -1,6 +1,7 @@
+#define _CRT_SECURE_NO_WARNINGS
 #include "HttpResponse.h"
 
-HttpResponse::HttpResponse(WebSocket socket) {
+HttpResponse::HttpResponse(WebSocket& socket) {
     setStatus(socket.getOp());
     contentType = "text/html";
 
@@ -23,15 +24,19 @@ HttpResponse::HttpResponse(WebSocket socket) {
 
 string HttpResponse::createResponse(string URI) {
     string responseMsg;
-    ifstream t(URI);
-    string body((std::istreambuf_iterator<char>(t)),
-        std::istreambuf_iterator<char>());
-    contentLength = to_string(body.length());
+    if (URI == "/") { URI = "/index.html"; }
+    string fullAddr = "www" + URI;
+    stringstream body;
+    ifstream t(fullAddr, ios::in);
+    if (t.is_open()) {
+        body << t.rdbuf();
+    }
+    contentLength = to_string(body.str().length());
     responseMsg.append("HTTP/1.1 200 OK\r\n");
     responseMsg.append("Content-Length: " + contentLength + "\r\n");
     responseMsg.append("Content-Type: " + contentType + "\r\n");
     responseMsg.append("\r\n");
-    responseMsg.append(body);
+    responseMsg.append(body.str());
     return responseMsg;
 }
 

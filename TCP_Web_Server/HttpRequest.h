@@ -19,7 +19,7 @@ private:
     static string parseLang(string& buffer);
     static string parseURI(string& buffer);
 public:
-    HttpRequest(WebSocket socket);
+    HttpRequest(WebSocket& socket);
     ~HttpRequest() = default;
 
     // Getters

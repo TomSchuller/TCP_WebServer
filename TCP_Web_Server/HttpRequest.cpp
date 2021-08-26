@@ -1,6 +1,6 @@
 #include "HttpRequest.h"
 
-HttpRequest::HttpRequest(WebSocket socket) {
+HttpRequest::HttpRequest(WebSocket& socket) {
     SOCKET msgSocket = socket.getID();
     char* buffer = new char[MAX_RECV_BUFF + 1];
 
@@ -28,10 +28,12 @@ HttpRequest::HttpRequest(WebSocket socket) {
         cout << "Web Server Received: " << bytesRecv << " bytes of " << recvBuffer << " message." << endl;
 
         operation = parseOperation(recvBuffer);
-        lang = parseLang(recvBuffer);
+        lang = parseLang(recvBuffer); //TODO: Fix a bug that appears when there isn't a qurrey string
         uri = parseURI(recvBuffer);
 
         socket.setAsset(uri);
+        socket.setOp(operation);
+        socket.setSend(WebSocket::State::SEND);
     }
 }
 
