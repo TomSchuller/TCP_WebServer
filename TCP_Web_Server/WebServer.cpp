@@ -45,6 +45,8 @@ WebServer::WebServer() {
     addSocket(listenSocket, WebSocket::State::LISTEN);
 }
 
+
+
 WebServer::~WebServer() {
     for (int i = 0; i < MAX_SOCKETS; ++i)
     {
@@ -66,18 +68,29 @@ bool WebServer::addSocket(SOCKET id, WebSocket::State state) {
             sockets[i].setID(id);
             sockets[i].setRecv(state);
             sockets[i].setSend(WebSocket::State::IDLE);
+
+
+            // Set the socket to be in non-blocking mode.
+            unsigned long flag = 1;
+            if (ioctlsocket(sockets[i].getID(), FIONBIO, &flag) != 0)
+            {
+                cout << "Web Server: Error at ioctlsocket(): " << WSAGetLastError() << endl;
+                //TODO: exception
+            }
             return true;
         }
     }
     return false;
 }
+
 void WebServer::removeSocket(int index) {
     sockets[index].setRecv(WebSocket::State::EMPTY);
     sockets[index].setSend(WebSocket::State::EMPTY);
 }
+
 void WebServer::acceptConnection(int index) {
-    SOCKET id = sockets[index].getID();
-    struct sockaddr_in from;		// Address of sending partner
+    SOCKET id = sockets[index].getID(); //gets the listener
+    struct sockaddr_in from;		    //Address of sending partner
     int fromLen = sizeof(from);
 
     SOCKET msgSocket = accept(id, (struct sockaddr*)&from, &fromLen);
@@ -88,15 +101,6 @@ void WebServer::acceptConnection(int index) {
     }
     cout << "Web Server: Client " << inet_ntoa(from.sin_addr) << ":" << ntohs(from.sin_port) << " is connected." << endl;
 
-    // Set the socket to be in non-blocking mode.
-    unsigned long flag = 1;
-    if (ioctlsocket(msgSocket, FIONBIO, &flag) != 0)
-    {
-        cout << "Web Server: Error at ioctlsocket(): " << WSAGetLastError() << endl;
-        //TODO: exception
-
-    }
-
     if (!addSocket(msgSocket, WebSocket::State::RECEIVE))
     {
         cout << "Too many connections, dropped!" << endl;
@@ -104,9 +108,76 @@ void WebServer::acceptConnection(int index) {
         //TODO: exception
     }
 }
+
 void WebServer::receiveMessage(int index) {
     HttpRequest newReq(sockets[index]);
 }
+
 void WebServer::sendMessage(int index) {
     HttpResponse newRes(sockets[index]);
+}
+
+int WebServer::getWaitingSockets()
+{
+    int nfd;
+  
+    FD_ZERO(&waitRecv);
+    FD_ZERO(&waitSend);
+
+    for (int i = 0; i < MAX_SOCKETS; i++)
+    {
+        if ((sockets[i].getRecv() == WebSocket::State::LISTEN) || (sockets[i].getRecv() == WebSocket::State::RECEIVE))
+            FD_SET(server.getSocket(i).getID(), &waitRecv);
+    }
+
+    for (int i = 0; i < WebServer::MAX_SOCKETS; i++)
+    {
+        if (sockets[i].getSend() == WebSocket::State::SEND)
+            FD_SET(sockets[i].getID(), &waitSend);
+    }
+
+    nfd = select(0, &waitRecv, &waitSend, nullptr, nullptr);
+    if (nfd == SOCKET_ERROR)
+    {
+        cout << "Web Server: Error at select(): " << WSAGetLastError() << endl;
+        WSACleanup();
+        //TODO: exception
+    }
+
+    return nfd;
+}
+
+void WebServer::HandleRecv(int& nfd)
+{
+    for (int i = 0; i < WebServer::MAX_SOCKETS && nfd > 0; i++)
+    {
+        if (FD_ISSET(sockets[i].getID(), &waitRecv))
+        {
+            nfd--;
+            switch (sockets[i].getRecv())
+            {
+            case WebSocket::State::LISTEN:
+                acceptConnection(i);
+                break;
+
+            case WebSocket::State::RECEIVE:
+                receiveMessage(i);
+                break;
+            default:
+                break;
+            }
+        }
+    }
+}
+
+void WebServer::HandleSend(int& nfd)
+{
+    for (int i = 0; i < WebServer::MAX_SOCKETS && nfd > 0; i++)
+    {
+        if (FD_ISSET(sockets[i].getID(), &waitSend))
+        {
+            nfd--;
+            sendMessage(i);
+        }
+    }
 }

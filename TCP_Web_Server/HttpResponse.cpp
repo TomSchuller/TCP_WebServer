@@ -24,19 +24,18 @@ HttpResponse::HttpResponse(WebSocket& socket) {
 
 string HttpResponse::createResponse(string URI) {
     string responseMsg;
-    if (URI == "/") { URI = "/index.html"; }
+    if (URI == "/") { URI = "index.html"; }
     string fullAddr = "www" + URI;
     stringstream body;
     ifstream t(fullAddr, ios::in);
-    if (t.is_open()) {
-        body << t.rdbuf();
-    }
+    if (t.is_open()) { body << t.rdbuf(); } //TODO: fix the bug that causes the file to be closed! :-(
     contentLength = to_string(body.str().length());
     responseMsg.append("HTTP/1.1 200 OK\r\n");
     responseMsg.append("Content-Length: " + contentLength + "\r\n");
     responseMsg.append("Content-Type: " + contentType + "\r\n");
     responseMsg.append("\r\n");
     responseMsg.append(body.str());
+    t.close();
     return responseMsg;
 }
 
