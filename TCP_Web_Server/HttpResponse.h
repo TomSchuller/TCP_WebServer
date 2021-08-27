@@ -17,6 +17,6 @@ public:
     ~HttpResponse() = default;
 
     string createResponse(string URI);
-
+    string doGET(string URI);
     void setStatus(WebSocket::OperationType op);
 };

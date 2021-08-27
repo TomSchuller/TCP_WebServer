@@ -7,8 +7,14 @@ int main()
     // Accept connections and handles them one by one.
     while (true)
     {
-        int NumOfWaitingSockets = server.getWaitingSockets();
-        server.HandleSend(NumOfWaitingSockets);
-        server.HandleRecv(NumOfWaitingSockets);
+        try {
+            int NumOfWaitingSockets = server.getWaitingSockets();
+            server.HandleSend(NumOfWaitingSockets); 
+            server.HandleRecv(NumOfWaitingSockets);
+        }
+        catch (exception& e) {
+            cout << e.what() << endl;
+            exit(1);
+        }
     }
 }

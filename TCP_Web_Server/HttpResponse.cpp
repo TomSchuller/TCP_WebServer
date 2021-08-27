@@ -13,29 +13,37 @@ HttpResponse::HttpResponse(WebSocket& socket) {
 
     if (SOCKET_ERROR == bytesSent)
     {
-        cout << "Web Server: Error at send(): " << WSAGetLastError() << endl;
-        // TODO: exception
+        string error = "Web Server: Error at send(): " + to_string(WSAGetLastError());
+        throw exception(error.c_str());
     }
 
-    cout << "Web Server: Sent: " << bytesSent << "\\" << message.length() << " bytes of \"" << message << "\" message.\n";
+    cout << "Web Server: Sent: " << bytesSent << "\\" << message.length() << " bytes." << endl; // of \"" << message << "\" message.\n";
 
     socket.setSend(WebSocket::State::IDLE);
 }
 
 string HttpResponse::createResponse(string URI) {
+    
+   
+}
+
+string HttpResponse::doGET(string URI)
+{
     string responseMsg;
-    if (URI == "/") { URI = "index.html"; }
-    string fullAddr = "www" + URI;
     stringstream body;
+
+    if (URI == "/") { URI = "/index.html"; }
+    string fullAddr = "www" + URI;
+
     ifstream t(fullAddr, ios::in);
-    if (t.is_open()) { body << t.rdbuf(); } //TODO: fix the bug that causes the file to be closed! :-(
+    if (t.is_open()) { body << t.rdbuf(); }
+
     contentLength = to_string(body.str().length());
     responseMsg.append("HTTP/1.1 200 OK\r\n");
     responseMsg.append("Content-Length: " + contentLength + "\r\n");
     responseMsg.append("Content-Type: " + contentType + "\r\n");
     responseMsg.append("\r\n");
     responseMsg.append(body.str());
-    t.close();
     return responseMsg;
 }
 
@@ -45,6 +53,7 @@ void HttpResponse::setStatus(WebSocket::OperationType op) {
     if (op == WebSocket::OperationType::OPTIONS) status = "OPTIONS";
     if (op == WebSocket::OperationType::HEAD) status = "HEAD";
     if (op == WebSocket::OperationType::PUT) status = "PUT";
-    if (op == WebSocket::OperationType::DEL) status = "DEL";
+    if (op == WebSocket::OperationType::DEL) status = "DELETE";
     if (op == WebSocket::OperationType::TRACE) status = "TRACE";
+    else status = "EMPTY";
 }

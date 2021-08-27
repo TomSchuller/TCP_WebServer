@@ -1,6 +1,6 @@
 #include "HttpRequest.h"
 
-HttpRequest::HttpRequest(WebSocket& socket) {
+HttpRequest::HttpRequest(WebSocket& socket)  {
     SOCKET msgSocket = socket.getID();
     char* buffer = new char[MAX_RECV_BUFF + 1];
 
@@ -8,16 +8,13 @@ HttpRequest::HttpRequest(WebSocket& socket) {
 
     if (SOCKET_ERROR == bytesRecv)
     {
-        cout << "Web Server: Error at recv(): " << WSAGetLastError() << endl;
-        closesocket(msgSocket); // TODO - maybe problem
-        //removeSocket(index);
-        // TODO: exception
+        string error = "Web Server: Error at recv(): " + to_string(WSAGetLastError());
+        throw exception(error.c_str());
     }
     if (bytesRecv <= 0)
     {
-        closesocket(msgSocket); // TODO - maybe problem
-        //removeSocket(index);
-        // TODO: exception
+        string error = "Web Server: Close connection request was recived from socket: " + to_string(msgSocket);
+        throw exception(error.c_str());
     }
     else
     {
@@ -25,7 +22,7 @@ HttpRequest::HttpRequest(WebSocket& socket) {
         buffer[bytesRecv] = '\0'; //add the null-terminating to make it a string
         recvBuffer.assign(buffer);
 
-        cout << "Web Server Received: " << bytesRecv << " bytes of " << recvBuffer << " message." << endl;
+        cout << "Web Server Received: " << bytesRecv << " bytes." << endl;// of " << recvBuffer << " message." << endl;
 
         operation = parseOperation(recvBuffer);
         lang = parseLang(recvBuffer); //TODO: Fix a bug that appears when there isn't a qurrey string
@@ -65,4 +62,5 @@ WebSocket::OperationType HttpRequest::parseOperation(string& buffer) {
     if (op == "PUT") return WebSocket::OperationType::PUT;
     if (op == "DELETE") return WebSocket::OperationType::DEL;
     if (op == "TRACE") return WebSocket::OperationType::TRACE;
+    else return WebSocket::OperationType::EMPTY;
 }

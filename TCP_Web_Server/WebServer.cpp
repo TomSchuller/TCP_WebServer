@@ -9,8 +9,8 @@ WebServer::WebServer() {
     //wsaData
     if (NO_ERROR != WSAStartup(MAKEWORD(2, 2), &wsaData))
     {
-        cout << "Web Server: Error at WSAStartup()\n";
-        //TODO: exception
+        cout << "Web Server: Error at WSAStartup()." << endl;
+        exit(1);
     }
 
     //listenSocket
@@ -19,7 +19,7 @@ WebServer::WebServer() {
     {
         cout << "Web Server: Error at socket(): " << WSAGetLastError() << endl;
         WSACleanup();
-        //TODO: exception
+        exit(1);
     }
 
     //serverService
@@ -31,7 +31,7 @@ WebServer::WebServer() {
         cout << "Web Server: Error at bind(): " << WSAGetLastError() << endl;
         closesocket(listenSocket);
         WSACleanup();
-        //TODO: exception
+        exit(1);
     }
 
     if (SOCKET_ERROR == listen(listenSocket, 5))
@@ -39,10 +39,16 @@ WebServer::WebServer() {
         cout << "Web Server: Error at listen(): " << WSAGetLastError() << endl;
         closesocket(listenSocket);
         WSACleanup();
-        //TODO: exception
+        exit(1);
     }
 
-    addSocket(listenSocket, WebSocket::State::LISTEN);
+    try {
+        addSocket(listenSocket, WebSocket::State::LISTEN);
+    }
+    catch (exception& e) {
+        cout << e.what() << endl;
+        exit(1);
+    }
 }
 
 
@@ -54,13 +60,21 @@ WebServer::~WebServer() {
         closesocket(sockets[i].getID());
     }
     delete[] sockets;
-
     cout << "Web Server: Closing Connection." << endl;
     closesocket(listenSocket);
     WSACleanup();
 }
 
-bool WebServer::addSocket(SOCKET id, WebSocket::State state) {
+bool WebServer::addSocket(SOCKET& id, WebSocket::State state) { //TOOD: is & is needed on socket?
+    // Set the socket to be in non-blocking mode.
+    unsigned long flag = 1;
+    if (ioctlsocket(id, FIONBIO, &flag) != 0)
+    {
+        string error = "Web Server: Error at ioctlsocket(): " + to_string(WSAGetLastError());
+        closesocket(id);
+        throw exception(error.c_str());
+    }
+
     for (int i = 0; i < MAX_SOCKETS; ++i)
     {
         if (sockets[i].getRecv() == WebSocket::State::EMPTY)
@@ -68,15 +82,6 @@ bool WebServer::addSocket(SOCKET id, WebSocket::State state) {
             sockets[i].setID(id);
             sockets[i].setRecv(state);
             sockets[i].setSend(WebSocket::State::IDLE);
-
-
-            // Set the socket to be in non-blocking mode.
-            unsigned long flag = 1;
-            if (ioctlsocket(sockets[i].getID(), FIONBIO, &flag) != 0)
-            {
-                cout << "Web Server: Error at ioctlsocket(): " << WSAGetLastError() << endl;
-                //TODO: exception
-            }
             return true;
         }
     }
@@ -96,25 +101,39 @@ void WebServer::acceptConnection(int index) {
     SOCKET msgSocket = accept(id, (struct sockaddr*)&from, &fromLen);
     if (INVALID_SOCKET == msgSocket)
     {
-        cout << "Web Server: Error at accept(): " << WSAGetLastError() << endl;
-        //TODO: exception
+        string error = "Web Server: Error at accept(): " + to_string(WSAGetLastError());
+        throw exception(error.c_str());
     }
     cout << "Web Server: Client " << inet_ntoa(from.sin_addr) << ":" << ntohs(from.sin_port) << " is connected." << endl;
 
     if (!addSocket(msgSocket, WebSocket::State::RECEIVE))
     {
-        cout << "Too many connections, dropped!" << endl;
-        closesocket(id);
-        //TODO: exception
+        closesocket(msgSocket); //TODO: id?
+        throw exception("Too many connections, dropped!");
     }
 }
 
 void WebServer::receiveMessage(int index) {
-    HttpRequest newReq(sockets[index]);
+    try {
+        HttpRequest newReq(sockets[index]);
+    }
+    catch (exception& e) {
+        closesocket(sockets[index].getID()); //TODO: relevant for all the closesockets calls, 
+                                             //consider adding this command into the removeSocket func
+        removeSocket(index);
+        cout << e.what() << endl;
+    }
 }
 
 void WebServer::sendMessage(int index) {
-    HttpResponse newRes(sockets[index]);
+    try {
+        HttpResponse newRes(sockets[index]);
+    }
+    catch (exception& e) {
+        closesocket(sockets[index].getID()); 
+        removeSocket(index);
+        cout << e.what() << endl;
+    }
 }
 
 int WebServer::getWaitingSockets()
@@ -128,10 +147,6 @@ int WebServer::getWaitingSockets()
     {
         if ((sockets[i].getRecv() == WebSocket::State::LISTEN) || (sockets[i].getRecv() == WebSocket::State::RECEIVE))
             FD_SET(server.getSocket(i).getID(), &waitRecv);
-    }
-
-    for (int i = 0; i < WebServer::MAX_SOCKETS; i++)
-    {
         if (sockets[i].getSend() == WebSocket::State::SEND)
             FD_SET(sockets[i].getID(), &waitSend);
     }
@@ -139,9 +154,9 @@ int WebServer::getWaitingSockets()
     nfd = select(0, &waitRecv, &waitSend, nullptr, nullptr);
     if (nfd == SOCKET_ERROR)
     {
-        cout << "Web Server: Error at select(): " << WSAGetLastError() << endl;
+        string error = "Web Server: Error at select(): " + to_string(WSAGetLastError());
         WSACleanup();
-        //TODO: exception
+        throw exception(error.c_str());
     }
 
     return nfd;
@@ -157,9 +172,13 @@ void WebServer::HandleRecv(int& nfd)
             switch (sockets[i].getRecv())
             {
             case WebSocket::State::LISTEN:
-                acceptConnection(i);
+                try {
+                    acceptConnection(i);
+                }
+                catch (exception& e) {
+                    cout << e.what() << endl;
+                }
                 break;
-
             case WebSocket::State::RECEIVE:
                 receiveMessage(i);
                 break;
