@@ -46,5 +46,8 @@
     <None Include="www\index.html">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="www\new.html">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

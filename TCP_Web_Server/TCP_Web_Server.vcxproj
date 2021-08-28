@@ -152,6 +152,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="www\index.html" />
+    <None Include="www\new.html" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -27,9 +27,11 @@ HttpRequest::HttpRequest(WebSocket& socket)  {
         operation = parseOperation(recvBuffer);
         lang = parseLang(recvBuffer); //TODO: Fix a bug that appears when there isn't a qurrey string
         uri = parseURI(recvBuffer);
+        body = parseBody(recvBuffer);
 
         socket.setAsset(uri);
         socket.setOp(operation);
+        socket.setBody(body);
         socket.setSend(WebSocket::State::SEND);
     }
 }
@@ -40,6 +42,16 @@ string HttpRequest::parseURI(string& buffer) {
     getline(iss, _uri, ' ');
     getline(iss, _uri, ' ');
     return _uri;
+}
+
+string HttpRequest::parseBody(string& buffer)
+{
+    string phrase = "\r\n\r\n";
+    int pos = buffer.find_last_of(phrase);
+    if (pos == EOF) {
+        throw exception("Bad Requset", 400);
+    }
+    return buffer.substr(++pos);
 }
 
 string HttpRequest::parseLang(string& buffer) {

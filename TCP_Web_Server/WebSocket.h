@@ -17,6 +17,7 @@ private:
     State send = State::IDLE;			// Sending?
     OperationType op = OperationType::EMPTY;	            // Sending sub-type
     std::string asset;
+    std::string body;
 
 public:
     //Constructor
@@ -31,6 +32,7 @@ public:
     const State& getSend() const { return send; }
     const OperationType& getOp() const { return op; }
     const std::string& getAsset() const { return asset; }
+    const std::string& getBody() const { return body; }
 
 //Setters
     void setID(SOCKET _id) { id = _id; }
@@ -38,6 +40,7 @@ public:
     void setSend(State _send) { send = _send; }
     void setOp(OperationType _op) { op = _op; }
     void setAsset(std::string _asset) { asset = _asset; }
+    void setBody(std::string _body) { body = _body; }
 
 //Methods
 };

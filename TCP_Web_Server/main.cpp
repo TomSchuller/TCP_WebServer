@@ -1,6 +1,8 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include "WebServer.h"
 
+//TODO:Make exceptions as error responses
+
 int main()
 {
     WebServer& server = WebServer::getInstance();

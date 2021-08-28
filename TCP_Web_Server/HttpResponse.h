@@ -8,7 +8,9 @@ using namespace std;
 
 class HttpResponse {
 private:
-    string status;
+    WebSocket::OperationType operation;
+    string statusCode;
+    string statusMsg;
     string contentLength;
     string contentType;
 
@@ -16,7 +18,13 @@ public:
     HttpResponse(WebSocket& socket);
     ~HttpResponse() = default;
 
-    string createResponse(string URI);
-    string doGET(string URI);
-    void setStatus(WebSocket::OperationType op);
+    string createResponse(WebSocket& socket);
+    string doGET(WebSocket& socket);
+    string doPOST(WebSocket& socket);
+    string doOPTIONS(WebSocket& socket);
+    string doPUT(WebSocket& socket);
+    string doDELETE(WebSocket& socket);
+    string doTRACE(WebSocket& socket);
+    string doHEAD(WebSocket& socket);
+    string doERROR();
 };
