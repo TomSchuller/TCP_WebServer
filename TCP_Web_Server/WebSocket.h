@@ -5,6 +5,8 @@
 #include <iostream>
 #include <string>
 
+using namespace std;
+
 class WebSocket {
 public:
     //Enums
@@ -15,9 +17,7 @@ private:
     SOCKET id;			// Socket handle
     State recv = State::EMPTY;			// Receiving?
     State send = State::IDLE;			// Sending?
-    OperationType op = OperationType::EMPTY;	            // Sending sub-type
-    std::string asset;
-    std::string body;
+    string request;
 
 public:
     //Constructor
@@ -30,17 +30,11 @@ public:
     const SOCKET& getID() const { return id; }
     const State& getRecv() const { return recv; }
     const State& getSend() const { return send; }
-    const OperationType& getOp() const { return op; }
-    const std::string& getAsset() const { return asset; }
-    const std::string& getBody() const { return body; }
+    const string& getRequest() const { return request; }
 
 //Setters
     void setID(SOCKET _id) { id = _id; }
     void setRecv(State _recv) { recv = _recv; }
     void setSend(State _send) { send = _send; }
-    void setOp(OperationType _op) { op = _op; }
-    void setAsset(std::string _asset) { asset = _asset; }
-    void setBody(std::string _body) { body = _body; }
-
-//Methods
+    void setRequest(string _request) { request = _request; }
 };

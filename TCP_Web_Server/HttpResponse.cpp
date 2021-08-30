@@ -1,7 +1,11 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include "HttpResponse.h"
 
-HttpResponse::HttpResponse(WebSocket& socket) : operation(socket.getOp()) {
+HttpResponse::HttpResponse(WebSocket& socket) {
+    operation = parseOperation(socket.getRequest());
+    uri = parseURI(socket.getRequest());
+    lang = parseLang(socket.getRequest());
+
     contentType = "text/html";
 
     string message = createResponse(socket);
@@ -55,10 +59,10 @@ string HttpResponse::doGET(WebSocket& socket)
 {
     string responseMsg;
     stringstream body;
-    string URI = socket.getAsset();
+    string addr = uri;
 
-    if (URI == "/") { URI = "/index.html"; }
-    string fullAddr = "www" + URI;
+    if (uri == "/") { addr = "/index.html"; }
+    string fullAddr = "www" + addr;
 
     ifstream t(fullAddr, ios::in);
     if (t.is_open()) {
@@ -90,10 +94,10 @@ string HttpResponse::doPOST(WebSocket& socket)
 
 string HttpResponse::doOPTIONS(WebSocket& socket)
 {
-    string responseMsg,Addr,URI= socket.getAsset();
+    string responseMsg, Addr;
     stringstream body;
 
-    if (URI == "/" || URI=="*") { Addr = "/index.html"; }
+    if (uri == "/" || uri == "*") { Addr = "/index.html"; }
     string fullAddr = "www" + Addr;
 
     ifstream t(fullAddr, ios::in);
@@ -117,10 +121,10 @@ string HttpResponse::doOPTIONS(WebSocket& socket)
 
 string HttpResponse::doPUT(WebSocket& socket) // TODO: Change body
 {
-    string responseMsg,URI= socket.getAsset(),body = socket.getBody();
+    string responseMsg, addr = uri, body = parseBody(socket.getRequest());
 
-    if (URI == "/") { URI = "/index.html"; }
-    string fullAddr = "www" + URI;
+    if (uri == "/") { addr = "/index.html"; }
+    string fullAddr = "www" + addr;
 
     ifstream check(fullAddr, ios::in); //checks if exists
     if (!check.is_open()) {
@@ -155,10 +159,10 @@ string HttpResponse::doPUT(WebSocket& socket) // TODO: Change body
 
 string HttpResponse::doDELETE(WebSocket& socket)
 {
-    string responseMsg, URI = socket.getAsset(), body = socket.getBody();
+    string responseMsg, addr = uri, body = parseBody(socket.getRequest());
 
-    if (URI == "/") { URI = "/index.html"; }
-    string fullAddr = "www" + URI;
+    if (uri == "/") { addr = "/index.html"; }
+    string fullAddr = "www" + addr;
 
     if (remove(fullAddr.c_str()) != 0) { // TODO: Change body
         statusCode = "500";
@@ -191,15 +195,15 @@ string HttpResponse::doHEAD(WebSocket& socket)
 {
     string responseMsg;
     stringstream body;
-    string URI = socket.getAsset();
+    string addr = uri;
 
-    if (URI == "/") { URI = "/index.html"; }
-    string fullAddr = "www" + URI;
+    if (uri == "/") { addr = "/index.html"; }
+    string fullAddr = "www" + addr;
 
     ifstream t(fullAddr, ios::in);
     if (t.is_open()) {
-        statusCode = "200";
-        statusMsg = "OK";
+        statusCode = "204";
+        statusMsg = "No Content";
         body << t.rdbuf();
     }
     else {
@@ -221,4 +225,45 @@ string HttpResponse::doHEAD(WebSocket& socket)
 string HttpResponse::doERROR()
 {
     return string();
+}
+
+string HttpResponse::parseURI(const string& buffer) {
+    string _uri;
+    istringstream iss(buffer);
+    getline(iss, _uri, ' ');
+    getline(iss, _uri, ' ');
+    return _uri;
+}
+
+string HttpResponse::parseBody(const string& buffer)
+{
+    string phrase = "\r\n\r\n";
+    int pos = buffer.find_last_of(phrase);
+    if (pos == EOF) {
+        throw exception("Bad Requset", 400);
+    }
+    return buffer.substr(++pos);
+}
+
+string HttpResponse::parseLang(const string& buffer) {
+    string _lang;
+    istringstream iss(buffer);
+    getline(iss, _lang, '?');
+    getline(iss, _lang, '=');
+    _lang = _lang.substr(0, 2);
+    return _lang;
+}
+
+WebSocket::OperationType HttpResponse::parseOperation(const string& buffer) {
+    string op;
+    istringstream iss(buffer);
+    getline(iss, op, ' ');
+    if (op == "GET") return WebSocket::OperationType::GET;
+    if (op == "POST") return WebSocket::OperationType::POST;
+    if (op == "OPTIONS") return WebSocket::OperationType::OPTIONS;
+    if (op == "HEAD") return WebSocket::OperationType::HEAD;
+    if (op == "PUT") return WebSocket::OperationType::PUT;
+    if (op == "DELETE") return WebSocket::OperationType::DEL;
+    if (op == "TRACE") return WebSocket::OperationType::TRACE;
+    else return WebSocket::OperationType::EMPTY;
 }
