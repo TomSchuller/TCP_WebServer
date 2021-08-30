@@ -55,7 +55,7 @@ string HttpResponse::createResponse(WebSocket& socket) {
     }
 }
 
-string HttpResponse::doGET(WebSocket& socket)
+string HttpResponse::doGET(WebSocket& socket) // TODO: Change body
 {
     string responseMsg;
     stringstream body;
@@ -86,13 +86,40 @@ string HttpResponse::doGET(WebSocket& socket)
     return responseMsg;
 }
 
-string HttpResponse::doPOST(WebSocket& socket)
+string HttpResponse::doPOST(WebSocket& socket) // TODO: Change body
 {
-    //TODO: how to deal with the unlimited size of post requests.
-    return string();
+    string responseMsg;
+    string addr = uri;
+
+    if (uri == "/") { addr = "/index.html"; }
+    string fullAddr = "www" + addr;
+
+    ifstream check(fullAddr, ios::in); //checks if exists
+    if (!check.is_open()) {
+        statusCode = "201";
+        statusMsg = "Created";
+        ofstream t(fullAddr, ofstream::trunc); //sets the new resource
+        if (!t.is_open()) {
+            statusCode = "500";
+            statusMsg = "Internal Server Error";
+        }
+        t.close();
+    }
+    else {
+        statusCode = "204";
+        statusMsg = "No Content";
+    }
+    check.close();
+
+    cout << parseBody(socket.getRequest());
+    
+
+    responseMsg.append("HTTP/1.1 " + statusCode + " " + statusMsg + "\r\n");
+    responseMsg.append("\r\n ");
+    return responseMsg;
 }
 
-string HttpResponse::doOPTIONS(WebSocket& socket)
+string HttpResponse::doOPTIONS(WebSocket& socket) // TODO: Change body
 {
     string responseMsg, Addr;
     stringstream body;
@@ -186,9 +213,37 @@ string HttpResponse::doDELETE(WebSocket& socket)
     return responseMsg;
 }
 
-string HttpResponse::doTRACE(WebSocket& socket)
+string HttpResponse::doTRACE(WebSocket& socket) // TODO: Change body
 {
-    return string();
+    string responseMsg;
+    stringstream body;
+    string addr = uri;
+
+    if (uri == "/") { addr = "/index.html"; }
+    string fullAddr = "www" + addr;
+
+    ifstream t(fullAddr, ios::in);
+    if (t.is_open()) {
+        statusCode = "200";
+        statusMsg = "OK";
+        contentType = "message/http";
+        body << socket.getRequest();
+    }
+    else {
+        statusCode = "404";
+        statusMsg = "Not Found";
+        body << ""; 
+    }
+    t.close();
+
+    contentLength = to_string(body.str().length());
+    responseMsg.append("HTTP/1.1 " + statusCode + " " + statusMsg + "\r\n");
+    responseMsg.append("Content-Length: " + contentLength + "\r\n");
+    responseMsg.append("Content-Type: " + contentType + "\r\n");
+    responseMsg.append("\r\n");
+    responseMsg.append(body.str());
+
+    return responseMsg;
 }
 
 string HttpResponse::doHEAD(WebSocket& socket)
@@ -238,20 +293,20 @@ string HttpResponse::parseURI(const string& buffer) {
 string HttpResponse::parseBody(const string& buffer)
 {
     string phrase = "\r\n\r\n";
-    int pos = buffer.find_last_of(phrase);
+    int pos = buffer.find(phrase);
     if (pos == EOF) {
         throw exception("Bad Requset", 400);
     }
-    return buffer.substr(++pos);
+    return buffer.substr(pos+phrase.length());
 }
 
-string HttpResponse::parseLang(const string& buffer) {
-    string _lang;
-    istringstream iss(buffer);
-    getline(iss, _lang, '?');
-    getline(iss, _lang, '=');
-    _lang = _lang.substr(0, 2);
-    return _lang;
+string HttpResponse::parseLang(const string& buffer) { // TODO: Think about exception
+    string phrase = "?lang=";
+    int pos = buffer.find(phrase);
+    if (pos == EOF) {
+        throw exception("Bad Requset", 400);
+    }
+    return buffer.substr(pos+phrase.length(), 2);
 }
 
 WebSocket::OperationType HttpResponse::parseOperation(const string& buffer) {
