@@ -115,7 +115,7 @@ string HttpResponse::doOPTIONS(WebSocket& socket)
     return responseMsg;
 }
 
-string HttpResponse::doPUT(WebSocket& socket) // TODO: Change body
+string HttpResponse::doPUT(WebSocket& socket)
 {
     string responseMsg,URI= socket.getAsset(),body = socket.getBody();
 
@@ -160,7 +160,7 @@ string HttpResponse::doDELETE(WebSocket& socket)
     if (URI == "/") { URI = "/index.html"; }
     string fullAddr = "www" + URI;
 
-    if (remove(fullAddr.c_str()) != 0) { // TODO: Change body
+    if (remove(fullAddr.c_str()) != 0) {
         statusCode = "500";
         statusMsg = "Internal Server Error";
         body = "<h3>Error 500 Internal Server Error</h3>";
