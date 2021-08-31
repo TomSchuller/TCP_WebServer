@@ -9,10 +9,9 @@ using namespace std;
 
 class HttpRequest {
 private:
-    static const int MAX_RECV_BUFF = 4096; //TODO: consider if we need more or less space.
     string buffer;
-
 public:
+    static const int MAX_RECV_BUFF = 4096; //TODO: consider if we need more or less space.
     HttpRequest(WebSocket& socket);
     ~HttpRequest() = default;
 
