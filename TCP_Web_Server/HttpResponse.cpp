@@ -152,7 +152,6 @@ string HttpResponse::doPUT(WebSocket& socket)
     return responseMsg;
 }
 
-
 string HttpResponse::doDELETE(WebSocket& socket)
 {
     return string();
