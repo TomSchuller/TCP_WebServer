@@ -45,4 +45,5 @@ public:
     int getWaitingSockets();
     void HandleRecv(int& nfd);
     void HandleSend(int& nfd);
+    void handleError(const SOCKET& socket, string statusMsg, int statusCode);
 };

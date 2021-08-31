@@ -45,13 +45,20 @@ WebServer::WebServer() {
     try {
         addSocket(listenSocket, WebSocket::State::LISTEN);
     }
+    catch (WebServerException& e) {
+        handleError(listenSocket, e.getMsg(), e.getCode());
+        if (e.getCloseSocket()) {
+            closesocket(listenSocket);
+        }
+        cout << e.what() << endl;
+        exit(1);
+    }
     catch (exception& e) {
+        closesocket(listenSocket);
         cout << e.what() << endl;
         exit(1);
     }
 }
-
-
 
 WebServer::~WebServer() {
     for (int i = 0; i < MAX_SOCKETS; ++i)
@@ -70,9 +77,8 @@ bool WebServer::addSocket(SOCKET& id, WebSocket::State state) { //TOOD: is & is 
     unsigned long flag = 1;
     if (ioctlsocket(id, FIONBIO, &flag) != 0)
     {
-        string error = "Web Server: Error at ioctlsocket(): " + to_string(WSAGetLastError());
-        closesocket(id);
-        throw exception(error.c_str());
+        cout << "Web Server: Error at ioctlsocket(): " << to_string(WSAGetLastError());
+        throw WebServerException("Internal Server Error", 500);
     }
 
     for (int i = 0; i < MAX_SOCKETS; ++i)
@@ -101,39 +107,23 @@ void WebServer::acceptConnection(int index) {
     SOCKET msgSocket = accept(id, (struct sockaddr*)&from, &fromLen);
     if (INVALID_SOCKET == msgSocket)
     {
-        string error = "Web Server: Error at accept(): " + to_string(WSAGetLastError());
-        throw exception(error.c_str());
+        throw WebServerException("Internal Server Error", 500, false); 
     }
     cout << "Web Server: Client " << inet_ntoa(from.sin_addr) << ":" << ntohs(from.sin_port) << " is connected." << endl;
 
     if (!addSocket(msgSocket, WebSocket::State::RECEIVE))
     {
-        closesocket(msgSocket); //TODO: id?
-        throw exception("Too many connections, dropped!");
+        closesocket(msgSocket);
+        throw WebServerException("Internal Server Error", 500, false);
     }
 }
 
 void WebServer::receiveMessage(int index) {
-    try {
-        HttpRequest newReq(sockets[index]);
-    }
-    catch (exception& e) {
-        closesocket(sockets[index].getID()); //TODO: relevant for all the closesockets calls, 
-                                             //consider adding this command into the removeSocket func
-        removeSocket(index);
-        cout << e.what() << endl;
-    }
+    HttpRequest newReq(sockets[index]);
 }
 
 void WebServer::sendMessage(int index) {
-    try {
-        HttpResponse newRes(sockets[index]);
-    }
-    catch (exception& e) {
-        closesocket(sockets[index].getID()); 
-        removeSocket(index);
-        cout << e.what() << endl;
-    }
+    HttpResponse newRes(sockets[index]);
 }
 
 int WebServer::getWaitingSockets()
@@ -156,7 +146,7 @@ int WebServer::getWaitingSockets()
     {
         string error = "Web Server: Error at select(): " + to_string(WSAGetLastError());
         WSACleanup();
-        throw exception(error.c_str());
+        throw WebServerException("Internal Server Error", 500, false);
     }
 
     return nfd;
@@ -168,22 +158,32 @@ void WebServer::HandleRecv(int& nfd)
     {
         if (FD_ISSET(sockets[i].getID(), &waitRecv))
         {
-            nfd--;
-            switch (sockets[i].getRecv())
-            {
-            case WebSocket::State::LISTEN:
-                try {
+            try {
+                nfd--;
+                switch (sockets[i].getRecv())
+                {
+                case WebSocket::State::LISTEN:
                     acceptConnection(i);
+                    break;
+                case WebSocket::State::RECEIVE:
+                    receiveMessage(i);
+                    break;
+                default:
+                    break;
                 }
-                catch (exception& e) {
-                    cout << e.what() << endl;
+            }
+            catch (WebServerException& e) {
+                handleError(sockets[i].getID(), e.getMsg(), e.getCode());
+                if (e.getCloseSocket()) {
+                    closesocket(sockets[i].getID());
+                    removeSocket(i);
                 }
-                break;
-            case WebSocket::State::RECEIVE:
-                receiveMessage(i);
-                break;
-            default:
-                break;
+                cout << e.what() << endl;
+            }
+            catch (exception& e) {
+                closesocket(sockets[i].getID());
+                removeSocket(i);
+                cout << e.what() << endl;
             }
         }
     }
@@ -196,7 +196,47 @@ void WebServer::HandleSend(int& nfd)
         if (FD_ISSET(sockets[i].getID(), &waitSend))
         {
             nfd--;
-            sendMessage(i);
+            try {
+                sendMessage(i);
+            }
+            catch (WebServerException& e) {
+                handleError(sockets[i].getID(), e.getMsg(), e.getCode());
+                if (e.getCloseSocket()) {
+                    closesocket(sockets[i].getID());
+                    removeSocket(i);
+                }
+                cout << e.what() << endl;
+            }
+            catch (exception& e) {
+                closesocket(sockets[i].getID());
+                removeSocket(i);
+                cout << e.what() << endl;
+            }
         }
     }
 }
+
+void WebServer::handleError(const SOCKET& socket, string statusMsg, int statusCode)
+{
+    string responseMsg;
+    string body = "<!DOCTYPE html><html><head><title>Error!</title></head><body><h1>";
+    body.append(to_string(statusCode) + statusMsg);
+    body.append("</h1></body></html>");
+    responseMsg.assign("HTTP/1.1 " + to_string(statusCode) + " " + statusMsg + "\r\n");
+    responseMsg.append("Content-Length: " + to_string(body.length()) + "\r\n");
+    responseMsg.append("Content-Type: text/html");
+    responseMsg.append("\r\n");
+    responseMsg.append("\r\n");
+    responseMsg.append(body);
+
+    int bytesSent = send(socket, body.c_str(), (int)body.length(), 0);
+
+    if (SOCKET_ERROR == bytesSent)
+    {
+        string error = "Web Server: Critical Error at Error: " + to_string(statusCode) + "(" + statusMsg + ") Handling: " + to_string(WSAGetLastError());
+        cout << error << endl;
+    }
+
+    cout << "Web Server: Sent: " << bytesSent << "\\" << body.length() << " bytes." << endl;
+}
+

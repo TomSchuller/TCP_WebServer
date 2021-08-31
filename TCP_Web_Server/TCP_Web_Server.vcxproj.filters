@@ -41,13 +41,8 @@
     <ClInclude Include="HttpRequest.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="www\index.html">
-      <Filter>Resource Files</Filter>
-    </None>
-    <None Include="www\new.html">
-      <Filter>Resource Files</Filter>
-    </None>
+    <ClInclude Include="WebServerException.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
