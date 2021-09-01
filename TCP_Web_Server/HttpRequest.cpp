@@ -8,13 +8,13 @@ HttpRequest::HttpRequest(WebSocket& socket)  {
 
     if (SOCKET_ERROR == bytesRecv)
     {
-        string error = "Web Server: Error at recv(): " + to_string(WSAGetLastError());
-        throw exception(error.c_str());
+        cout << "Web Server: Error at recv(): " << to_string(WSAGetLastError());
+        throw WebServerException("Internal Server Error", 500, false);
     }
     if (bytesRecv <= 0)
     {
-        string error = "Web Server: Close connection request was recived from socket: " + to_string(msgSocket);
-        throw exception(error.c_str());
+        cout << "Web Server: Close connection request was recived from socket: " << to_string(msgSocket);
+        throw WebServerException("Internal Server Error", 500, false);
     }
     else
     {

@@ -107,6 +107,7 @@ void WebServer::acceptConnection(int index) {
     SOCKET msgSocket = accept(id, (struct sockaddr*)&from, &fromLen);
     if (INVALID_SOCKET == msgSocket)
     {
+        cout << "Web Server: Error at accept(): " << to_string(WSAGetLastError());
         throw WebServerException("Internal Server Error", 500, false); 
     }
     cout << "Web Server: Client " << inet_ntoa(from.sin_addr) << ":" << ntohs(from.sin_port) << " is connected." << endl;
@@ -146,7 +147,7 @@ int WebServer::getWaitingSockets()
     {
         string error = "Web Server: Error at select(): " + to_string(WSAGetLastError());
         WSACleanup();
-        throw WebServerException("Internal Server Error", 500, false);
+        throw exception(error.c_str());
     }
 
     return nfd;
@@ -166,6 +167,7 @@ void WebServer::HandleRecv(int& nfd)
                     acceptConnection(i);
                     break;
                 case WebSocket::State::RECEIVE:
+                    sockets[i].setRecv(WebSocket::State::IDLE); // TODO: Placed IDLE so we won't recieve same thing from client
                     receiveMessage(i);
                     break;
                 default:
@@ -197,6 +199,7 @@ void WebServer::HandleSend(int& nfd)
         {
             nfd--;
             try {
+                sockets[i].setSend(WebSocket::State::IDLE); // TODO: Placed IDLE so we won't send again to the client
                 sendMessage(i);
             }
             catch (WebServerException& e) {
@@ -220,7 +223,7 @@ void WebServer::handleError(const SOCKET& socket, string statusMsg, int statusCo
 {
     string responseMsg;
     string body = "<!DOCTYPE html><html><head><title>Error!</title></head><body><h1>";
-    body.append(to_string(statusCode) + statusMsg);
+    body.append(to_string(statusCode) + " " + statusMsg);
     body.append("</h1></body></html>");
     responseMsg.assign("HTTP/1.1 " + to_string(statusCode) + " " + statusMsg + "\r\n");
     responseMsg.append("Content-Length: " + to_string(body.length()) + "\r\n");

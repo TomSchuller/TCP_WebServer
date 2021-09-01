@@ -41,5 +41,4 @@ public:
     string doDELETE(WebSocket& socket);
     string doTRACE(WebSocket& socket);
     string doHEAD(WebSocket& socket);
-    string doERROR();
 };
