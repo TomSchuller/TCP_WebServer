@@ -4,6 +4,7 @@
 #include <iostream>
 #include <WinSock2.h>
 #include <sstream>
+#include "WebServerException.h"
 
 using namespace std;
 

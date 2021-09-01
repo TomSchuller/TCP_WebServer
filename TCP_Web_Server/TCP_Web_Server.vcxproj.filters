@@ -52,14 +52,11 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="www\default\index.html">
-      <Filter>Resource Files\default</Filter>
+    <None Include="www\index.html">
+      <Filter>Resource Files</Filter>
     </None>
-    <None Include="www\fr\index.html">
-      <Filter>Resource Files\fr</Filter>
-    </None>
-    <None Include="www\he\index.html">
-      <Filter>Resource Files\he</Filter>
+    <None Include="www\new.html">
+      <Filter>Resource Files</Filter>
     </None>
   </ItemGroup>
 </Project>

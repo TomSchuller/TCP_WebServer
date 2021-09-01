@@ -4,6 +4,7 @@
 #include <streambuf>
 #include "HttpRequest.h"
 
+
 using namespace std;
 
 class HttpResponse {
@@ -40,5 +41,4 @@ public:
     string doDELETE(WebSocket& socket);
     string doTRACE(WebSocket& socket);
     string doHEAD(WebSocket& socket);
-    string doERROR();
 };

@@ -1,8 +1,6 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include "WebServer.h"
 
-//TODO:Make exceptions as error responses
-
 int main()
 {
     WebServer& server = WebServer::getInstance();
@@ -13,6 +11,10 @@ int main()
             int NumOfWaitingSockets = server.getWaitingSockets();
             server.HandleSend(NumOfWaitingSockets); 
             server.HandleRecv(NumOfWaitingSockets);
+        }
+        catch (WebServerException& e) {
+            cout << e.what() << endl;
+            exit(1);
         }
         catch (exception& e) {
             cout << e.what() << endl;

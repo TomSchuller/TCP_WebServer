@@ -148,6 +148,7 @@
     <ClInclude Include="HttpRequest.h" />
     <ClInclude Include="HttpResponse.h" />
     <ClInclude Include="WebServer.h" />
+    <ClInclude Include="WebServerException.h" />
     <ClInclude Include="WebSocket.h" />
   </ItemGroup>
   <ItemGroup>

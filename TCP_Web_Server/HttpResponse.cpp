@@ -16,8 +16,9 @@ HttpResponse::HttpResponse(WebSocket& socket) {
 
     if (SOCKET_ERROR == bytesSent)
     {
-        string error = "Web Server: Error at send(): " + to_string(WSAGetLastError());
-        throw exception(error.c_str());
+        cout << "Web Server: Error at send(): " << to_string(WSAGetLastError());
+        throw WebServerException("Internal Server Error", 500, false);
+
     }
 
     cout << "Web Server: Sent: " << bytesSent << "\\" << message.length() << " bytes." << endl; // of \"" << message << "\" message.\n";
@@ -26,7 +27,6 @@ HttpResponse::HttpResponse(WebSocket& socket) {
 }
 
 string HttpResponse::createResponse(WebSocket& socket) {
-    //TODO: Add language support
     switch (operation) {
     case WebSocket::OperationType::GET:
         return doGET(socket);
@@ -50,12 +50,12 @@ string HttpResponse::createResponse(WebSocket& socket) {
         return doHEAD(socket);
         break;
     default:
-        return doERROR();
+        throw WebServerException("Method Not Allowed", 405, false);
         break;
     }
 }
 
-string HttpResponse::doGET(WebSocket& socket) // TODO: Change body
+string HttpResponse::doGET(WebSocket& socket)
 {
     string responseMsg;
     stringstream body;
@@ -80,9 +80,9 @@ string HttpResponse::doGET(WebSocket& socket) // TODO: Change body
     if (r1.is_open()) { body << r1.rdbuf(); }
     else if (r2.is_open()) { body << r2.rdbuf(); }
     else {
-        statusCode = "404";
-        statusMsg = "Not Found";
-        body << "";
+        r1.close();
+        r2.close();
+        throw WebServerException("Not Found", 404, false);
     }
     r1.close();
     r2.close();
@@ -99,7 +99,7 @@ string HttpResponse::doGET(WebSocket& socket) // TODO: Change body
     return responseMsg;
 }
 
-string HttpResponse::doPOST(WebSocket& socket) // TODO: Change body
+string HttpResponse::doPOST(WebSocket& socket)
 {
     string responseMsg;
     string addr = uri;
@@ -113,8 +113,8 @@ string HttpResponse::doPOST(WebSocket& socket) // TODO: Change body
         statusMsg = "Created";
         ofstream t(fullAddr, ofstream::trunc); //sets the new resource
         if (!t.is_open()) {
-            statusCode = "500";
-            statusMsg = "Internal Server Error";
+            t.close();
+            throw WebServerException("Internal Server Error", 500, false);
         }
         t.close();
     }
@@ -132,7 +132,7 @@ string HttpResponse::doPOST(WebSocket& socket) // TODO: Change body
     return responseMsg;
 }
 
-string HttpResponse::doOPTIONS(WebSocket& socket) // TODO: Change body
+string HttpResponse::doOPTIONS(WebSocket& socket)
 {
     string responseMsg, Addr;
     stringstream body;
@@ -147,9 +147,8 @@ string HttpResponse::doOPTIONS(WebSocket& socket) // TODO: Change body
         body << "Allow: OPTIONS,GET,HEAD,POST,DELETE,TRACE,PUT\r\n";
     }
     else {
-        statusCode = "404";
-        statusMsg = "Not Found";
-        body << "";
+        t.close();
+        throw WebServerException("Not Found", 404, false);
     }
 
     t.close();
@@ -159,7 +158,7 @@ string HttpResponse::doOPTIONS(WebSocket& socket) // TODO: Change body
     return responseMsg;
 }
 
-string HttpResponse::doPUT(WebSocket& socket) // TODO: Change body
+string HttpResponse::doPUT(WebSocket& socket)
 {
     string responseMsg, addr = uri, body = parseBody(socket.getRequest());
 
@@ -182,8 +181,8 @@ string HttpResponse::doPUT(WebSocket& socket) // TODO: Change body
         t << body;
     }
     else {
-        statusCode = "500";
-        statusMsg = "Internal Server Error";
+        t.close();
+        throw WebServerException("Internal Server Error", 500, false);
     }
     t.close();
 
@@ -203,16 +202,8 @@ string HttpResponse::doDELETE(WebSocket& socket)
     if (uri == "/") { addr = "/index.html"; }
     string fullAddr = "www/default" + addr;
 
-    if (remove(fullAddr.c_str()) != 0) { // TODO: Change body
-        statusCode = "500";
-        statusMsg = "Internal Server Error";
-        body = "<h3>Error 500 Internal Server Error</h3>";
-        contentLength = to_string(body.length());
-        responseMsg.append("HTTP/1.1 " + statusCode + " " + statusMsg + "\r\n");
-        responseMsg.append("Content-Length: " + contentLength + "\r\n");
-        responseMsg.append("Content-Type: " + contentType + "\r\n");
-        responseMsg.append("\r\n");
-        responseMsg.append(body);
+    if (remove(fullAddr.c_str()) != 0) { 
+        throw WebServerException("Internal Server Error", 500, false); // TODO: Why 500? Shouldn't it be 400 Not Found?
     }
     else {
         statusCode = "204";
@@ -223,7 +214,7 @@ string HttpResponse::doDELETE(WebSocket& socket)
     return responseMsg;
 }
 
-string HttpResponse::doTRACE(WebSocket& socket) // TODO: Change body
+string HttpResponse::doTRACE(WebSocket& socket)
 {
     string responseMsg;
     stringstream body;
@@ -240,9 +231,8 @@ string HttpResponse::doTRACE(WebSocket& socket) // TODO: Change body
         body << socket.getRequest();
     }
     else {
-        statusCode = "404";
-        statusMsg = "Not Found";
-        body << ""; 
+        t.close();
+        throw WebServerException("Not Found", 404, false);
     }
     t.close();
 
@@ -272,9 +262,8 @@ string HttpResponse::doHEAD(WebSocket& socket)
         body << t.rdbuf();
     }
     else {
-        statusCode = "404";
-        statusMsg = "Not Found";
-        body << "";
+        t.close();
+        throw WebServerException("Not Found", 404, false);
     }
     t.close();
 
@@ -285,11 +274,6 @@ string HttpResponse::doHEAD(WebSocket& socket)
     responseMsg.append("\r\n");
 
     return responseMsg;
-}
-
-string HttpResponse::doERROR()
-{
-    return string();
 }
 
 string HttpResponse::parseURI(const string& buffer) {
@@ -310,12 +294,13 @@ string HttpResponse::parseBody(const string& buffer)
     string phrase = "\r\n\r\n";
     int pos = buffer.find(phrase);
     if (pos == EOF) {
-        throw exception("Bad Requset", 400);
+        throw WebServerException("Bad Request", 400, false);
+
     }
     return buffer.substr(pos+phrase.length());
 }
 
-string HttpResponse::parseLang(const string& buffer) { // TODO: Think about exception
+string HttpResponse::parseLang(const string& buffer) {
     string query;
     string hasQuery = "?";
     string hasLangQuery = "lang=";
@@ -330,8 +315,7 @@ string HttpResponse::parseLang(const string& buffer) { // TODO: Think about exce
         query = _uri.substr(pos + hasQuery.length());
         pos = query.find(hasLangQuery);
         if (pos == EOF || (query.length() - (pos + hasLangQuery.length()) < 2)) {
-            //throw WebServerException("Bad Request ", 400);
-            throw exception("400 Bad Request");
+            throw WebServerException("Bad Request", 400, false);
         }
         return query.substr(pos + hasLangQuery.length(),2);
     }
@@ -351,29 +335,3 @@ WebSocket::OperationType HttpResponse::parseOperation(const string& buffer) {
     if (op == "TRACE") return WebSocket::OperationType::TRACE;
     else return WebSocket::OperationType::EMPTY;
 }
-
-
-//string getHttpErrorResponse() {
-//    string res;
-//    string body;
-//
-//    body = "<html> <title>" + errorCode  " " + errorMsg + "</title> <h1>"+errorCode+"</h1> <h2>"+errorMsg+"</h2>   </html>"
-//
-//
-//
-//    res = "http/1.1 " + errorCode + " " + errorMsg + "\r\n";
-//    res.append("Content Length")
-//
-//
-//        /*
-//        *  responseMsg.append("HTTP/1.1 " + statusCode + " " + statusMsg + "\r\n");
-//    if (lang != "") {
-//        responseMsg.append("Content-Language: " + lang + "\r\n");
-//    }
-//    responseMsg.append("Content-Length: " + contentLength + "\r\n");
-//    responseMsg.append("Content-Type: " + contentType + "\r\n");
-//    responseMsg.append("\r\n");
-//    responseMsg.append(body.str());
-//    return responseMsg;
-//        */
-//}
