@@ -63,6 +63,7 @@ string HttpResponse::doGET(WebSocket& socket)
     string defualtFullAddr;
     string addr = uri;
 
+    //if there is no path, it sets a default one
     if (uri == "/") { addr = "/index.html"; }
    
     fullAddr = defualtFullAddr = "www";
@@ -104,6 +105,7 @@ string HttpResponse::doPOST(WebSocket& socket)
     string responseMsg;
     string addr = uri;
 
+    //if there is no path, it sets a default one
     if (uri == "/") { addr = "/index.html"; }
     string fullAddr = "www/default" + addr;
 
@@ -134,9 +136,10 @@ string HttpResponse::doPOST(WebSocket& socket)
 
 string HttpResponse::doOPTIONS(WebSocket& socket)
 {
-    string responseMsg, Addr;
+    string responseMsg, Addr = uri;
     stringstream body;
 
+    //if there is no path, it sets a default one
     if (uri == "/" || uri == "*") { Addr = "/index.html"; }
     string fullAddr = "www/default" + Addr;
 
@@ -162,6 +165,7 @@ string HttpResponse::doPUT(WebSocket& socket)
 {
     string responseMsg, addr = uri, body = parseBody(socket.getRequest());
 
+    //if there is no path, it sets a default one
     if (uri == "/") { addr = "/index.html"; }
     string fullAddr = "www/default" + addr;
 
@@ -199,12 +203,15 @@ string HttpResponse::doDELETE(WebSocket& socket)
 {
     string responseMsg, addr = uri, body = parseBody(socket.getRequest());
 
+    //if there is no path, it sets a default one
     if (uri == "/") { addr = "/index.html"; }
     string fullAddr = "www/default" + addr;
-
-    if (remove(fullAddr.c_str()) != 0) { 
-        throw WebServerException("Internal Server Error", 500, false); // TODO: Why 500? Shouldn't it be 400 Not Found?
-    }
+   
+    ifstream t(fullAddr.c_str());
+    if (!(bool)t) { throw WebServerException("Not Found", 404, false); }
+    else { t.close(); }
+   
+    if (remove(fullAddr.c_str()) != 0) { throw WebServerException("Internal Server Error", 500, false); }
     else {
         statusCode = "204";
         statusMsg = "No Content";
@@ -220,6 +227,7 @@ string HttpResponse::doTRACE(WebSocket& socket)
     stringstream body;
     string addr = uri;
 
+    //if there is no path, it sets a default one
     if (uri == "/") { addr = "/index.html"; }
     string fullAddr = "www/default" + addr;
 
@@ -252,6 +260,7 @@ string HttpResponse::doHEAD(WebSocket& socket)
     stringstream body;
     string addr = uri;
 
+    //if there is no path, it sets a default one
     if (uri == "/") { addr = "/index.html"; }
     string fullAddr = "www/default" + addr;
 
@@ -307,13 +316,13 @@ string HttpResponse::parseLang(const string& buffer) {
 
     string _uri;
     istringstream iss(buffer);
-    getline(iss, _uri, ' ');
-    getline(iss, _uri, ' ');
+    getline(iss, _uri, ' '); //will get http/1.1
+    getline(iss, _uri, ' '); //will get the uri
 
-    int pos = _uri.find(hasQuery);
+    int pos = _uri.find(hasQuery); //checks if there is a query
     if (pos != EOF) {
         query = _uri.substr(pos + hasQuery.length());
-        pos = query.find(hasLangQuery);
+        pos = query.find(hasLangQuery); //checks if this is a lang query
         if (pos == EOF || (query.length() - (pos + hasLangQuery.length()) < 2)) {
             throw WebServerException("Bad Request", 400, false);
         }

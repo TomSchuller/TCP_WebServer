@@ -167,7 +167,7 @@ void WebServer::HandleRecv(int& nfd)
                     acceptConnection(i);
                     break;
                 case WebSocket::State::RECEIVE:
-                    sockets[i].setRecv(WebSocket::State::IDLE); // TODO: Placed IDLE so we won't recieve same thing from client
+                    sockets[i].setRecv(WebSocket::State::IDLE);
                     receiveMessage(i);
                     break;
                 default:
@@ -199,7 +199,7 @@ void WebServer::HandleSend(int& nfd)
         {
             nfd--;
             try {
-                sockets[i].setSend(WebSocket::State::IDLE); // TODO: Placed IDLE so we won't send again to the client
+                sockets[i].setSend(WebSocket::State::IDLE); 
                 sendMessage(i);
             }
             catch (WebServerException& e) {
@@ -232,7 +232,7 @@ void WebServer::handleError(const SOCKET& socket, string statusMsg, int statusCo
     responseMsg.append("\r\n");
     responseMsg.append(body);
 
-    int bytesSent = send(socket, body.c_str(), (int)body.length(), 0);
+    int bytesSent = send(socket, responseMsg.c_str(), (int)responseMsg.length(), 0);
 
     if (SOCKET_ERROR == bytesSent)
     {

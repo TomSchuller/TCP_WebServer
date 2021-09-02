@@ -12,7 +12,7 @@ class HttpRequest {
 private:
     string buffer;
 public:
-    static const int MAX_RECV_BUFF = 4096; //TODO: consider if we need more or less space.
+    static const int MAX_RECV_BUFF = 4096; 
     HttpRequest(WebSocket& socket);
     ~HttpRequest() = default;
 
