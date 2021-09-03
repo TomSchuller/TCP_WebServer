@@ -1,3 +1,6 @@
+/////////////////////////////////
+// This Class defines an HTTP Response
+/////////////////////////////////
 #pragma once
 #include <string>
 #include <fstream>

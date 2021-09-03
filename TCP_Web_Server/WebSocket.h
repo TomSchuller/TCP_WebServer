@@ -1,3 +1,6 @@
+/////////////////////////////////
+// This Class defines a Web socket.
+/////////////////////////////////
 #pragma once
 #pragma comment(lib, "Ws2_32.lib")
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
@@ -32,7 +35,7 @@ public:
     const State& getSend() const { return send; }
     const string& getRequest() const { return request; }
 
-//Setters
+    //Setters
     void setID(SOCKET _id) { id = _id; }
     void setRecv(State _recv) { recv = _recv; }
     void setSend(State _send) { send = _send; }

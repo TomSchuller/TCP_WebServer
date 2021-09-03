@@ -8,10 +8,12 @@ HttpResponse::HttpResponse(WebSocket& socket) {
 
     contentType = "text/html";
 
+    // Create the intended message
     string message = createResponse(socket);
 
     SOCKET msgSocket = socket.getID();
 
+    // send message
     int bytesSent = send(msgSocket, message.c_str(), (int)message.length(), 0);
 
     if (SOCKET_ERROR == bytesSent)
@@ -21,12 +23,13 @@ HttpResponse::HttpResponse(WebSocket& socket) {
 
     }
 
-    cout << "Web Server: Sent: " << bytesSent << "\\" << message.length() << " bytes." << endl; // of \"" << message << "\" message.\n";
+    cout << "Web Server: Sent: " << bytesSent << "\\" << message.length() << " bytes." << endl;
 
     socket.setSend(WebSocket::State::IDLE);
 }
 
 string HttpResponse::createResponse(WebSocket& socket) {
+    // Get the operation from the client
     switch (operation) {
     case WebSocket::OperationType::GET:
         return doGET(socket);

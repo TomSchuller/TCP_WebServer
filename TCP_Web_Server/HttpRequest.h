@@ -1,3 +1,6 @@
+/////////////////////////////////
+// This Class defines an HTTP Request.
+/////////////////////////////////
 #pragma once
 #include "WebSocket.h"
 #include <string>
